@@ -1,0 +1,56 @@
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg14
+    container_name: timescaledb
+    restart: unless-stopped
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 1234
+    volumes:
+      - ./volumes/timescale/data:/var/lib/postgresql/data
+    expose:
+      - 5432
+    networks:
+      - net-hb
+
+  opcplc-server:
+    image: mcr.microsoft.com/iotedge/opc-plc:latest
+    container_name: opcplc-server
+    restart: unless-stopped
+    command: [
+      "--pn=50000",       # Port number for the OPC UA server
+      "--autoaccept",     # Auto accept certificates
+      "--sph",            # Secure policy enabled
+      "--sn=5",           # Number of static nodes
+      "--sr=10",          # Sampling rate (ms)
+      "--st=uint",        # Static node type
+      "--fn=5",           # Number of fast-changing nodes
+      "--fr=1",           # Fast node sampling interval (ms)
+      "--ft=uint"         # Fast node type
+    ]
+    ports:
+      - "50000:50000"  # Exposing OPC UA port
+      - "8080:8080"    # Exposing the web interface
+    networks:
+      - net-hb
+
+  highbyte:
+    image: highbyte:3.4.1
+    container_name: highbyte
+    restart: unless-stopped
+    ports:
+      - "45245:45245"
+      - "1885:1885"
+      - "8885:8885"
+    volumes:
+      - ./volumes/highbyte:/usr/local/highbyte/appData
+    networks:
+      - net-hb
+
+networks:
+  net-hb:
+    name: net-hb
+    driver: bridge
